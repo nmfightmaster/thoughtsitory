@@ -6,6 +6,7 @@ A Python CLI tool for managing modular AI conversation nodes called **ThoughtNod
 
 - **Modular Conversation Management**: Create, view, and manage AI conversation nodes
 - **Node Forking**: Duplicate and branch conversations while preserving relationships
+- **Version Control**: Create snapshots and revert to previous versions with automatic backup
 - **Rich CLI Interface**: Beautiful console output with rich formatting
 - **Flexible Data Model**: Support for messages, tags, links, and versioning
 - **JSON Storage**: Simple file-based storage in JSON format
@@ -138,6 +139,49 @@ python thoughts.py add-message <node-id> --type user --text "What about the budg
 python thoughts.py snapshot <node-id> --summary "With Budget Discussion" --notes "Added budget considerations"
 ```
 
+#### Revert a ThoughtNode to a previous version
+```bash
+# Interactive mode - prompts for confirmation
+python thoughts.py revert <node-id> <version>
+
+# Skip confirmation prompt
+python thoughts.py revert <node-id> <version> --yes
+
+# List available versions before reverting
+python thoughts.py revert <node-id> <version> --list
+
+# Combine options
+python thoughts.py revert <node-id> <version> --list --yes
+```
+
+**Revert Features:**
+- Restores a ThoughtNode's content to a previously saved version
+- Automatically creates a "Pre-revert snapshot" of current state before reverting
+- Validates version numbers and provides helpful error messages
+- Shows detailed information about the target version before reverting
+- Confirms action with user unless `--yes` flag is used
+- Lists available versions with `--list` flag for easy reference
+
+**Example Revert Workflow:**
+```bash
+# 1. Create snapshots during development
+python thoughts.py create --title "Feature Development" --tags "development,feature"
+python thoughts.py add-message <node-id> --type user --text "Let's implement user authentication"
+python thoughts.py snapshot <node-id> --summary "Auth Start" --notes "Beginning authentication implementation"
+
+# 2. Continue development
+python thoughts.py add-message <node-id> --type ai --text "I'll help you implement OAuth2..."
+python thoughts.py add-message <node-id> --type user --text "Actually, let's use JWT instead"
+python thoughts.py snapshot <node-id> --summary "JWT Approach" --notes "Switched to JWT authentication"
+
+# 3. List available versions
+python thoughts.py revert <node-id> 1 --list
+
+# 4. Revert to earlier version
+python thoughts.py revert <node-id> 1 --yes
+# This creates a pre-revert snapshot and restores the original content
+```
+
 ### Data Model
 
 Each **ThoughtNode** contains:
@@ -167,6 +211,8 @@ Each version snapshot contains:
 - **summary**: Short label describing the version
 - **notes**: Optional explanation of the version's purpose
 - **content_snapshot**: Deep copy of all messages at the time of snapshot
+
+**Important Note**: When using the `revert` command, a "Pre-revert snapshot" is automatically created before restoring the target version. This ensures you can always recover the state that existed before the revert operation.
 
 ### File Structure
 

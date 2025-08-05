@@ -315,5 +315,106 @@ def snapshot(
         raise typer.Exit(1)
 
 
+@app.command()
+def revert(
+    node_id: str = typer.Argument(..., help="ID of the ThoughtNode to revert"),
+    version: int = typer.Argument(..., help="Version number to revert to"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
+    list_versions: bool = typer.Option(False, "--list", "-l", help="List available versions before reverting")
+):
+    """Revert a ThoughtNode's content to a previously saved version."""
+    from thoughtsitory.utils import load_thought_node, save_thought_node
+    
+    console.print(Panel.fit("Reverting ThoughtNode", style="bold blue"))
+    
+    # Load the node
+    node = load_thought_node(node_id)
+    if not node:
+        print_error_message(f"ThoughtNode with ID '{node_id}' not found")
+        raise typer.Exit(1)
+    
+    # List versions if requested
+    if list_versions:
+        console.print(f"\n[bold]Available versions for '{node.title}':[/bold]")
+        if not node.versions:
+            console.print("[yellow]No versions found. Create a snapshot first with 'thoughts snapshot'[/yellow]")
+            return
+        
+        for version_info in node.versions:
+            console.print(f"  Version {version_info['version']}: {version_info['summary']}")
+            console.print(f"    Timestamp: {version_info['timestamp']}")
+            if version_info.get('notes'):
+                console.print(f"    Notes: {version_info['notes']}")
+            console.print()
+    
+    # Validate version number
+    if not node.versions:
+        print_error_message("No versions found. Create a snapshot first with 'thoughts snapshot'")
+        raise typer.Exit(1)
+    
+    # Find the specified version
+    target_version = None
+    for version_info in node.versions:
+        if version_info['version'] == version:
+            target_version = version_info
+            break
+    
+    if not target_version:
+        available_versions = [v['version'] for v in node.versions]
+        print_error_message(f"Version {version} not found. Available versions: {available_versions}")
+        raise typer.Exit(1)
+    
+    # Show revert details
+    console.print(f"[bold]Node:[/bold] {node.title}")
+    console.print(f"[bold]Current messages:[/bold] {len(node.content)}")
+    console.print(f"[bold]Reverting to version:[/bold] {version}")
+    console.print(f"[bold]Version summary:[/bold] {target_version['summary']}")
+    if target_version.get('notes'):
+        console.print(f"[bold]Version notes:[/bold] {target_version['notes']}")
+    console.print(f"[bold]Version timestamp:[/bold] {target_version['timestamp']}")
+    console.print(f"[bold]Messages in version:[/bold] {len(target_version['content_snapshot'])}")
+    
+    # Confirm revert unless --yes flag is used
+    if not yes:
+        if not Confirm.ask("Are you sure you want to revert? This will create a snapshot of the current state first."):
+            console.print("[yellow]Revert cancelled.[/yellow]")
+            return
+    
+    try:
+        # Create a snapshot of current state before reverting
+        pre_revert_summary = "Pre-revert snapshot"
+        pre_revert_notes = f"Auto-created before reverting to version {version}"
+        
+        # Create the pre-revert snapshot
+        pre_revert_version = node.create_snapshot(pre_revert_summary, pre_revert_notes)
+        
+        # Replace content with the target version's content
+        node.content = []
+        for msg_data in target_version['content_snapshot']:
+            from thoughtsitory.models import Message
+            node.content.append(Message.from_dict(msg_data))
+        
+        # Update timestamp
+        node.updated_at = datetime.now(timezone.utc).isoformat()
+        
+        # Save the updated node
+        file_path = save_thought_node(node)
+        
+        print_success_message(f"Successfully reverted to version {version}!")
+        
+        # Display confirmation details
+        console.print(f"\n[bold]Revert completed:[/bold]")
+        console.print(f"  Node: {node.title}")
+        console.print(f"  Reverted to version: {version}")
+        console.print(f"  Version timestamp: {target_version['timestamp']}")
+        console.print(f"  Messages restored: {len(node.content)}")
+        console.print(f"  Pre-revert snapshot created: Version {pre_revert_version}")
+        console.print(f"[green]Saved to: {file_path}[/green]")
+        
+    except Exception as e:
+        print_error_message(f"Failed to revert ThoughtNode: {e}")
+        raise typer.Exit(1)
+
+
 if __name__ == "__main__":
     app() 
