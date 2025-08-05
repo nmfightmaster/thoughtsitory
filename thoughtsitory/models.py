@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 import uuid
 from enum import Enum
@@ -90,13 +90,30 @@ class ThoughtNode:
         """Create a new version snapshot."""
         version = {
             "id": str(uuid.uuid4()),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "description": description,
             "content": [msg.to_dict() for msg in self.content],
             "summary": self.summary
         }
         self.versions.append(version)
-        self.updated_at = datetime.utcnow().isoformat()
+        self.updated_at = datetime.now(timezone.utc).isoformat()
+    
+    def create_snapshot(self, summary: str = "", notes: str = "") -> int:
+        """Create a new snapshot version with auto-incremented version number."""
+        version_number = len(self.versions) + 1
+        
+        snapshot = {
+            "version": version_number,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "summary": summary,
+            "notes": notes,
+            "content_snapshot": [msg.to_dict() for msg in self.content]
+        }
+        
+        self.versions.append(snapshot)
+        self.updated_at = datetime.now(timezone.utc).isoformat()
+        
+        return version_number
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert the ThoughtNode to a dictionary for JSON serialization."""

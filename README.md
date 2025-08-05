@@ -5,6 +5,7 @@ A Python CLI tool for managing modular AI conversation nodes called **ThoughtNod
 ## Features
 
 - **Modular Conversation Management**: Create, view, and manage AI conversation nodes
+- **Node Forking**: Duplicate and branch conversations while preserving relationships
 - **Rich CLI Interface**: Beautiful console output with rich formatting
 - **Flexible Data Model**: Support for messages, tags, links, and versioning
 - **JSON Storage**: Simple file-based storage in JSON format
@@ -66,6 +67,77 @@ python thoughts.py add-message <node-id> --type ai --text "Hello, how can I help
 python thoughts.py add-tag <node-id> <tag>
 ```
 
+#### Fork (duplicate) a ThoughtNode
+```bash
+# Interactive mode - prompts for title and notes
+python thoughts.py fork <node-id>
+
+# With title and notes
+python thoughts.py fork <node-id> --title "Forked Conversation" --notes "Creating a new branch for testing"
+
+# With just title (notes will be prompted)
+python thoughts.py fork <node-id> --title "My Forked Node"
+```
+
+**Forking Features:**
+- Creates a new ThoughtNode with a unique UUID
+- Preserves all original content (messages, tags, metadata)
+- Establishes parent-child relationships between original and forked nodes
+- Allows adding explanatory notes about the fork reason
+- Updates both nodes' link metadata automatically
+
+**Example Fork Workflow:**
+```bash
+# 1. Create a conversation
+python thoughts.py create --title "AI Project Discussion" --tags "project,ai,planning"
+
+# 2. Add some messages
+python thoughts.py add-message <node-id> --type user --text "Let's discuss the AI project scope"
+python thoughts.py add-message <node-id> --type ai --text "I can help you plan the AI project..."
+
+# 3. Fork the conversation for a different approach
+python thoughts.py fork <node-id> --title "Alternative AI Approach" --notes "Exploring different implementation strategy"
+
+# 4. Both nodes now have proper links and can be developed independently
+```
+
+#### Create a snapshot version of a ThoughtNode
+```bash
+# Interactive mode - prompts for summary and notes
+python thoughts.py snapshot <node-id>
+
+# With summary and notes
+python thoughts.py snapshot <node-id> --summary "Version 1.0" --notes "Initial stable version"
+
+# With just summary (notes will be prompted)
+python thoughts.py snapshot <node-id> --summary "Before major changes"
+```
+
+**Snapshot Features:**
+- Creates a versioned snapshot of the current conversation state
+- Auto-increments version numbers (1, 2, 3, etc.)
+- Preserves all messages in the `content_snapshot` field
+- Allows adding summary labels and explanatory notes
+- Updates the node's timestamp automatically
+- Maintains version history in the node's `versions` array
+
+**Example Snapshot Workflow:**
+```bash
+# 1. Create and populate a conversation
+python thoughts.py create --title "Project Planning" --tags "planning,meeting"
+python thoughts.py add-message <node-id> --type user --text "Let's plan the project timeline"
+python thoughts.py add-message <node-id> --type ai --text "Here's a suggested timeline..."
+
+# 2. Create a snapshot before making changes
+python thoughts.py snapshot <node-id> --summary "Initial Plan" --notes "Baseline version before modifications"
+
+# 3. Continue working on the conversation
+python thoughts.py add-message <node-id> --type user --text "What about the budget?"
+
+# 4. Create another snapshot
+python thoughts.py snapshot <node-id> --summary "With Budget Discussion" --notes "Added budget considerations"
+```
+
 ### Data Model
 
 Each **ThoughtNode** contains:
@@ -75,14 +147,26 @@ Each **ThoughtNode** contains:
 - **Tags**: List of tags for categorization
 - **Timestamps**: Created and updated timestamps
 - **Content**: List of messages (user/AI conversations)
-- **Links**: Relationships to other nodes (parents, forks, related)
-- **Versions**: Version history snapshots
+- **Links**: Relationships to other nodes
+  - **Parents**: Original nodes that this node was forked from
+  - **Forks**: Nodes that were forked from this node
+  - **Related**: Other related nodes
+- **Versions**: Version history snapshots with auto-incremented version numbers
 - **Summary**: Optional summary text
 
 ### Message Types
 
 - **User Messages**: Human input in conversations
 - **AI Messages**: AI responses in conversations
+
+### Version Structure
+
+Each version snapshot contains:
+- **version**: Auto-incremented integer (1, 2, 3, etc.)
+- **timestamp**: ISO format UTC timestamp when snapshot was created
+- **summary**: Short label describing the version
+- **notes**: Optional explanation of the version's purpose
+- **content_snapshot**: Deep copy of all messages at the time of snapshot
 
 ### File Structure
 
@@ -130,12 +214,13 @@ def new_command():
 
 Planned features for future versions:
 
-- **Forking**: Create branches of conversations
 - **Search**: Find nodes by content or tags
 - **Export**: Export conversations in various formats
 - **Import**: Import from other conversation formats
 - **Graph Visualization**: Visualize node relationships
 - **AI Integration**: Direct AI API integration
+- **Version Management**: Advanced version control for ThoughtNodes
+- **Collaboration**: Multi-user support and sharing
 
 ## Contributing
 
