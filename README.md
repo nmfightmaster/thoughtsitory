@@ -270,6 +270,82 @@ python thoughts.py search --title "Game" --tag design       # Finds Game Design 
 python thoughts.py search --title "Game" --tag research     # No results (AND logic)
 ```
 
+#### Export ThoughtNodes as a graph
+```bash
+# Export all ThoughtNodes as a graph JSON file
+python thoughts.py export
+
+# Alternative short form
+python thoughts.py export -g
+```
+
+**Export Features:**
+- **Graph Format**: Exports ThoughtNodes as a JSON graph with nodes and edges
+- **Relationship Mapping**: Converts ThoughtNode links to graph edges with types
+- **Duplicate Prevention**: Avoids duplicate edges (e.g., if A links to B and B links to A)
+- **Summary Truncation**: Truncates summaries over 150 characters for readability
+- **Existing Node Validation**: Only includes edges that point to existing nodes
+- **Rich Output**: Shows success message with output path and statistics
+
+**Graph Structure:**
+The exported `data/graph.json` file contains:
+- **nodes**: Array of ThoughtNode data with id, title, and summary
+- **edges**: Array of relationship data with source, target, and type
+
+**Edge Types:**
+- **parent**: Links from child to parent nodes (from `links["parents"]`)
+- **fork**: Links from original to forked nodes (from `links["forks"]`)
+- **related**: Links between related nodes (from `links["related"]`)
+
+**Example Export Workflow:**
+```bash
+# 1. Create a network of related nodes
+python thoughts.py create --title "Main Project Discussion" --tags "project,main"
+python thoughts.py add-message <node-id-1> --type user --text "Let's start the main project"
+
+# 2. Fork the main discussion
+python thoughts.py fork <node-id-1> --title "UI Design Branch" --notes "Exploring UI design options"
+python thoughts.py add-message <node-id-2> --type user --text "What about the user interface?"
+
+# 3. Create a related discussion
+python thoughts.py create --title "Backend Architecture" --tags "backend,architecture"
+python thoughts.py add-message <node-id-3> --type user --text "Let's discuss the backend design"
+
+# 4. Export the graph
+python thoughts.py export
+# Output: data/graph.json with nodes and edges
+```
+
+**Graph JSON Example:**
+```json
+{
+  "nodes": [
+    {
+      "id": "1234abcd-5678-efgh-ijkl-mnopqrstuvwx",
+      "title": "Main Project Discussion",
+      "summary": "Initial project planning discussion"
+    },
+    {
+      "id": "5678efgh-9abc-def0-ghij-klmnopqrstuv",
+      "title": "UI Design Branch",
+      "summary": "Forked from Main Project Discussion. Reason: Exploring UI design options"
+    }
+  ],
+  "edges": [
+    {
+      "source": "5678efgh-9abc-def0-ghij-klmnopqrstuv",
+      "target": "1234abcd-5678-efgh-ijkl-mnopqrstuvwx",
+      "type": "parent"
+    },
+    {
+      "source": "1234abcd-5678-efgh-ijkl-mnopqrstuvwx",
+      "target": "5678efgh-9abc-def0-ghij-klmnopqrstuv",
+      "type": "fork"
+    }
+  ]
+}
+```
+
 #### Visualize ThoughtNodes and their relationships
 ```bash
 # Show forest of all top-level nodes (nodes without parents)

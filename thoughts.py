@@ -670,6 +670,107 @@ def search(
 
 
 @app.command()
+def export(
+    graph: bool = typer.Option(False, "--graph", "-g", help="Export as graph format")
+):
+    """Export ThoughtNodes to JSON format."""
+    from thoughtsitory.utils import list_thought_nodes
+    import json
+    from pathlib import Path
+    
+    console.print(Panel.fit("Exporting ThoughtNodes", style="bold blue"))
+    
+    # Load all nodes
+    all_nodes = list_thought_nodes()
+    
+    if not all_nodes:
+        console.print("[yellow]No ThoughtNodes found. Create some with 'thoughts create'[/yellow]")
+        return
+    
+    # Create a mapping of node IDs to nodes for quick lookup
+    nodes_by_id = {node.id: node for node in all_nodes}
+    
+    # Prepare nodes data
+    nodes_data = []
+    for node in all_nodes:
+        # Truncate summary if too long
+        summary = node.summary[:150] + "..." if len(node.summary) > 150 else node.summary
+        
+        nodes_data.append({
+            "id": node.id,
+            "title": node.title,
+            "summary": summary
+        })
+    
+    # Prepare edges data
+    edges_data = []
+    edge_set = set()  # To avoid duplicate edges
+    
+    for node in all_nodes:
+        # Process parents
+        for parent_id in node.links["parents"]:
+            if parent_id in nodes_by_id:  # Only include if parent exists
+                edge_key = tuple(sorted([node.id, parent_id]))
+                if edge_key not in edge_set:
+                    edges_data.append({
+                        "source": node.id,
+                        "target": parent_id,
+                        "type": "parent"
+                    })
+                    edge_set.add(edge_key)
+        
+        # Process forks
+        for fork_id in node.links["forks"]:
+            if fork_id in nodes_by_id:  # Only include if fork exists
+                edge_key = tuple(sorted([node.id, fork_id]))
+                if edge_key not in edge_set:
+                    edges_data.append({
+                        "source": node.id,
+                        "target": fork_id,
+                        "type": "fork"
+                    })
+                    edge_set.add(edge_key)
+        
+        # Process related
+        for related_id in node.links["related"]:
+            if related_id in nodes_by_id:  # Only include if related exists
+                edge_key = tuple(sorted([node.id, related_id]))
+                if edge_key not in edge_set:
+                    edges_data.append({
+                        "source": node.id,
+                        "target": related_id,
+                        "type": "related"
+                    })
+                    edge_set.add(edge_key)
+    
+    # Create the export data
+    export_data = {
+        "nodes": nodes_data,
+        "edges": edges_data
+    }
+    
+    # Ensure data directory exists
+    data_dir = Path("data")
+    data_dir.mkdir(exist_ok=True)
+    
+    # Write to file
+    output_path = data_dir / "graph.json"
+    
+    try:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(export_data, f, indent=2, ensure_ascii=False)
+        
+        print_success_message(f"Graph exported successfully!")
+        console.print(f"Output: {output_path}")
+        console.print(f"Nodes: {len(nodes_data)}")
+        console.print(f"Edges: {len(edges_data)}")
+        
+    except Exception as e:
+        print_error_message(f"Failed to export graph: {e}")
+        raise typer.Exit(1)
+
+
+@app.command()
 def visualize(
     node_id: str = typer.Option(None, "--node-id", "-n", help="ID of the root ThoughtNode to visualize")
 ):
