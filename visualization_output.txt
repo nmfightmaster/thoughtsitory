@@ -1,0 +1,21 @@
+
+Visualizing forest of 4 top-level nodes:
+
+Tree 1:
+Compare Test (0d92316a...) test, compare
+
+
+Tree 2:
+Test Node for Forking (695b1e89...) test, fork (+1)
+└── 🔄 Forks:
+    ├── Forked Test Node (ca7ac3a7...) test, fork (+1)
+    └── ForkedNode (e7f19120...) test, fork (+1)
+
+
+Tree 3:
+AI Project Planning (7fda0d55...) ai, planning (+1)
+
+
+Tree 4:
+Game Design Discussion (b840ecc2...) game, design (+1)
+

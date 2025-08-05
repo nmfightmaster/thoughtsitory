@@ -270,6 +270,66 @@ python thoughts.py search --title "Game" --tag design       # Finds Game Design 
 python thoughts.py search --title "Game" --tag research     # No results (AND logic)
 ```
 
+#### Visualize ThoughtNodes and their relationships
+```bash
+# Show forest of all top-level nodes (nodes without parents)
+python thoughts.py visualize
+
+# Show subtree rooted at a specific node
+python thoughts.py visualize --node-id 1234abcd
+
+# Alternative short form
+python thoughts.py visualize -n 1234abcd
+```
+
+**Visualize Features:**
+- **Hierarchical Tree View**: Displays nodes in a tree structure using `rich.tree`
+- **Relationship Types**: Different icons and colors for parents (📤), forks (🌿), and related nodes (🔗)
+- **Forest Mode**: Shows all top-level nodes when no `--node-id` is provided
+- **Subtree Mode**: Shows the complete subtree when a specific node ID is given
+- **Cycle Detection**: Handles circular references gracefully with cycle detection
+- **Missing Node Handling**: Shows warnings for broken links to non-existent nodes
+- **Summary Statistics**: Displays counts of total nodes and relationship types
+- **Truncated Display**: Long titles are truncated for better readability
+- **Short IDs**: Shows first 8 characters of UUIDs for compact display
+
+**Tree Output Features:**
+- **Node Labels**: Title (truncated if needed), short ID, and tags
+- **Color Coding**: Different colors for different relationship types
+- **Icons**: Visual indicators for parents (📤), forks (🌿), and related nodes (🔗)
+- **Depth Limiting**: Prevents infinite recursion with maximum depth protection
+- **Cycle Detection**: Shows cycle warnings to prevent infinite loops
+
+**Example Visualize Workflow:**
+```bash
+# 1. Create a network of related nodes
+python thoughts.py create --title "Main Project Discussion" --tags "project,main"
+python thoughts.py add-message <node-id-1> --type user --text "Let's start the main project"
+
+# 2. Fork the main discussion
+python thoughts.py fork <node-id-1> --title "UI Design Branch" --notes "Exploring UI design options"
+python thoughts.py add-message <node-id-2> --type user --text "What about the user interface?"
+
+# 3. Create a related discussion
+python thoughts.py create --title "Backend Architecture" --tags "backend,architecture"
+python thoughts.py add-message <node-id-3> --type user --text "Let's discuss the backend design"
+
+# 4. Visualize the entire network
+python thoughts.py visualize                    # Shows forest of all top-level nodes
+python thoughts.py visualize -n <node-id-1>   # Shows subtree from main project
+python thoughts.py visualize -n <node-id-2>   # Shows subtree from UI branch
+```
+
+**Tree Output Example:**
+```
+🌲 ThoughtNodes Forest
+├── 📤 Parents:
+│   └── 🌳 Main Project Discussion (1234abcd) [project,main]
+│       └── 🌿 Forks:
+│           └── 🌳 UI Design Branch (5678efgh) [project,main]
+└── 🌳 Backend Architecture (9abcdef0) [backend,architecture]
+```
+
 ### Data Model
 
 Each **ThoughtNode** contains:

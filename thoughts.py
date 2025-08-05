@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.prompt import Prompt, Confirm
 from rich.panel import Panel
 from rich.text import Text
+from rich.tree import Tree
 
 from thoughtsitory.models import ThoughtNode, MessageType
 from thoughtsitory.utils import save_thought_node, print_node_summary, print_success_message, print_error_message
@@ -666,6 +667,125 @@ def search(
     # Show summary
     if len(filtered_nodes) == limit and len(nodes) > limit:
         console.print(f"\n[dim]Showing first {limit} results. Use --limit to see more.[/dim]")
+
+
+@app.command()
+def visualize(
+    node_id: str = typer.Option(None, "--node-id", "-n", help="ID of the root ThoughtNode to visualize")
+):
+    """Display a hierarchical tree view of ThoughtNodes and their relationships."""
+    from thoughtsitory.utils import list_thought_nodes, load_thought_node
+    
+    console.print(Panel.fit("Visualizing ThoughtNodes", style="bold blue"))
+    
+    # Load all nodes
+    all_nodes = list_thought_nodes()
+    
+    if not all_nodes:
+        console.print("[yellow]No ThoughtNodes found. Create some with 'thoughts create'[/yellow]")
+        return
+    
+    # Create a mapping of node IDs to nodes for quick lookup
+    nodes_by_id = {node.id: node for node in all_nodes}
+    
+    # Track visited nodes to handle cycles
+    visited_nodes = set()
+    
+    def build_tree(node: ThoughtNode, tree: Tree, depth: int = 0) -> None:
+        """Recursively build a tree structure for visualization."""
+        if depth > 10:  # Prevent infinite recursion
+            tree.add(f"[red]... (max depth reached)[/red]")
+            return
+        
+        if node.id in visited_nodes:
+            tree.add(f"[yellow]... (cycle detected)[/yellow]")
+            return
+        
+        visited_nodes.add(node.id)
+        
+        # Create node label with title, ID, and tags
+        title = node.title[:40] + "..." if len(node.title) > 40 else node.title
+        short_id = node.id[:8]  # Show first 8 characters of ID
+        tags_str = f" [{', '.join(node.tags[:3])}]" if node.tags else ""
+        
+        node_label = f"[bold]{title}[/bold] [dim]({short_id})[/dim]{tags_str}"
+        
+        # Add child nodes for parents, forks, and related nodes
+        if node.links["parents"]:
+            parent_branch = tree.add("[blue]📤 Parents:[/blue]")
+            for parent_id in node.links["parents"]:
+                if parent_id in nodes_by_id:
+                    build_tree(nodes_by_id[parent_id], parent_branch, depth + 1)
+                else:
+                    parent_branch.add(f"[red]Missing parent: {parent_id[:8]}[/red]")
+        
+        if node.links["forks"]:
+            fork_branch = tree.add("[green]🌿 Forks:[/green]")
+            for fork_id in node.links["forks"]:
+                if fork_id in nodes_by_id:
+                    build_tree(nodes_by_id[fork_id], fork_branch, depth + 1)
+                else:
+                    fork_branch.add(f"[red]Missing fork: {fork_id[:8]}[/red]")
+        
+        if node.links["related"]:
+            related_branch = tree.add("[yellow]🔗 Related:[/yellow]")
+            for related_id in node.links["related"]:
+                if related_id in nodes_by_id:
+                    build_tree(nodes_by_id[related_id], related_branch, depth + 1)
+                else:
+                    related_branch.add(f"[red]Missing related: {related_id[:8]}[/red]")
+    
+    if node_id:
+        # Visualize subtree rooted at the specified node
+        root_node = load_thought_node(node_id)
+        if not root_node:
+            print_error_message(f"ThoughtNode with ID '{node_id}' not found")
+            raise typer.Exit(1)
+        
+        console.print(f"\n[bold]Visualizing subtree rooted at:[/bold] {root_node.title}")
+        
+        # Create the tree
+        tree = Tree(f"[bold blue]🌳 {root_node.title}[/bold blue] [dim]({root_node.id[:8]})[/dim]")
+        visited_nodes.clear()
+        build_tree(root_node, tree)
+        
+        console.print(tree)
+        
+    else:
+        # Visualize forest of all top-level nodes (nodes without parents)
+        top_level_nodes = []
+        for node in all_nodes:
+            if not node.links["parents"]:
+                top_level_nodes.append(node)
+        
+        if not top_level_nodes:
+            console.print("[yellow]No top-level nodes found. All nodes have parents.[/yellow]")
+            return
+        
+        console.print(f"\n[bold]Visualizing forest of {len(top_level_nodes)} top-level nodes:[/bold]")
+        
+        # Create forest
+        forest = Tree("[bold green]🌲 ThoughtNodes Forest[/bold green]")
+        
+        for root_node in top_level_nodes:
+            # Create a branch for each top-level node
+            root_branch = forest.add(f"[bold]{root_node.title}[/bold] [dim]({root_node.id[:8]})[/dim]")
+            visited_nodes.clear()
+            build_tree(root_node, root_branch)
+        
+        console.print(forest)
+    
+    # Show summary statistics
+    total_nodes = len(all_nodes)
+    nodes_with_parents = len([n for n in all_nodes if n.links["parents"]])
+    nodes_with_forks = len([n for n in all_nodes if n.links["forks"]])
+    nodes_with_related = len([n for n in all_nodes if n.links["related"]])
+    
+    console.print(f"\n[dim]Summary:[/dim]")
+    console.print(f"  Total nodes: {total_nodes}")
+    console.print(f"  Nodes with parents: {nodes_with_parents}")
+    console.print(f"  Nodes with forks: {nodes_with_forks}")
+    console.print(f"  Nodes with related: {nodes_with_related}")
 
 
 if __name__ == "__main__":
