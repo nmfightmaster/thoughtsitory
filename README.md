@@ -1,73 +1,154 @@
 # Thoughtsitory
 
-**Thoughtsitory** is a new kind of thinking tool — a version-controlled, modular, and persistent system for structured collaboration between humans and AI. It treats thought like code: modular, branchable, and trackable over time.
+A Python CLI tool for managing modular AI conversation nodes called **ThoughtNodes**.
 
-Instead of working in a single, sprawling conversation with an AI, Thoughtsitory breaks complex projects into manageable, scoped "ThoughtNodes" that can evolve independently or together. You can fork, merge, version, and revisit ideas just like you would in a Git repository — but for thoughts.
+## Features
 
-## What is a Thoughtsitory?
+- **Modular Conversation Management**: Create, view, and manage AI conversation nodes
+- **Rich CLI Interface**: Beautiful console output with rich formatting
+- **Flexible Data Model**: Support for messages, tags, links, and versioning
+- **JSON Storage**: Simple file-based storage in JSON format
+- **Extensible Architecture**: Easy to extend with new commands and features
 
-A **thoughtsitory** is a structured collection of interconnected ThoughtNodes. It represents a project, a line of inquiry, or an entire creative endeavor.
+## Installation
 
-- A **ThoughtNode** is a versioned conversation with scope.
-- Nodes are connected hierarchically or as a graph.
-- Nodes can be forked to explore alternatives without polluting the original.
-- Versions are tracked, and summaries are persisted over time.
-- The structure makes it easy to navigate, revisit, and expand complex thinking.
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd thoughtsitory
+```
 
-## Core Features
+2. Create a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-- **Scoped Thinking**: Keep each conversation narrowly focused, making AI assistance more coherent and manageable.
-- **Version Control**: Track the evolution of ideas through versioned updates to each node.
-- **Forking and Branching**: Explore alternative ideas or directions without losing your original thread.
-- **Merging**: Bring together insights from different nodes or branches into a unified idea.
-- **Summarization**: Each node carries an up-to-date summary of its current state, maintained by the AI or the user.
-- **Graph-Based Navigation**: Traverse your thoughts by topic, dependency, or chronology.
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-## Why Use Thoughtsitory?
+## Usage
 
-Modern AI tools are optimized for short-term tasks and lack memory across sessions or structure within them. Thoughtsitory addresses this gap by introducing:
+### Basic Commands
 
-- Persistent, queryable memory across scoped conversations
-- An intentional structure for large, evolving projects
-- A system that encourages clean, composable ideation
-- The ability to work with AI more like a collaborator than a notepad
+#### Create a new ThoughtNode
+```bash
+# Interactive mode
+python thoughts.py create
 
-This makes it ideal for:
+# With title and tags
+python thoughts.py create --title "My AI Conversation" --tags "ai,conversation,ideas"
+```
 
-- Game design and creative development
-- Research and thesis planning
-- Product and software design
-- Worldbuilding and storytelling
-- Strategic planning and business modeling
-- Personal knowledge management
+#### List all ThoughtNodes
+```bash
+python thoughts.py list
+```
 
-## Project Status
+#### View a specific ThoughtNode
+```bash
+python thoughts.py view <node-id>
+```
 
-Thoughtsitory is currently in early development. The initial goal is to build a minimal prototype with:
+#### Add a message to a ThoughtNode
+```bash
+# Interactive mode
+python thoughts.py add-message <node-id> --type user
 
-- CLI-based thoughtsitory and node management
-- Basic file persistence
-- Support for forking, merging, and summarizing ThoughtNodes
-- Integration with an LLM API for generating responses and summaries
+# With message text
+python thoughts.py add-message <node-id> --type ai --text "Hello, how can I help you?"
+```
 
-## Roadmap
+#### Add a tag to a ThoughtNode
+```bash
+python thoughts.py add-tag <node-id> <tag>
+```
 
-- ThoughtNode data model and file structure
-- CLI for creating, viewing, and navigating thoughtsitories
-- Version control (manual and automatic)
-- Scope shift detection and suggestion to fork
-- Visual representation (graph view)
-- AI integrations (OpenAI, Claude, local models)
-- Syncing across devices or teams
+### Data Model
 
-## Philosophy
+Each **ThoughtNode** contains:
 
-Thoughtsitory treats ideation as a first-class artifact — something worth managing, exploring, and revising intentionally. It's not just a note-taking app, not just an AI wrapper, and not a social platform. It's a system for long-term, deep work with AI.
+- **ID**: Unique UUID identifier
+- **Title**: Human-readable title
+- **Tags**: List of tags for categorization
+- **Timestamps**: Created and updated timestamps
+- **Content**: List of messages (user/AI conversations)
+- **Links**: Relationships to other nodes (parents, forks, related)
+- **Versions**: Version history snapshots
+- **Summary**: Optional summary text
+
+### Message Types
+
+- **User Messages**: Human input in conversations
+- **AI Messages**: AI responses in conversations
+
+### File Structure
+
+```
+thoughtsitory/
+├── thoughts.py              # Main CLI entrypoint
+├── requirements.txt         # Python dependencies
+├── README.md              # This file
+├── thoughtsitory/         # Package directory
+│   ├── __init__.py       # Package initialization
+│   ├── models.py         # Data models (ThoughtNode, Message)
+│   └── utils.py          # Utility functions
+└── data/                 # Storage directory (created automatically)
+    └── *.json           # ThoughtNode JSON files
+```
+
+## Development
+
+### Project Structure
+
+The project is organized for easy expansion:
+
+- **`thoughtsitory/models.py`**: Core data models
+- **`thoughtsitory/utils.py`**: File I/O and utility functions
+- **`thoughts.py`**: CLI commands and user interface
+
+### Adding New Commands
+
+To add new commands, extend the `app` object in `thoughts.py`:
+
+```python
+@app.command()
+def new_command():
+    """Description of the new command."""
+    # Implementation here
+```
+
+### Dependencies
+
+- **typer**: Modern CLI framework
+- **rich**: Beautiful terminal output
+- **uuid**: UUID generation (built-in)
+
+## Future Enhancements
+
+Planned features for future versions:
+
+- **Forking**: Create branches of conversations
+- **Search**: Find nodes by content or tags
+- **Export**: Export conversations in various formats
+- **Import**: Import from other conversation formats
+- **Graph Visualization**: Visualize node relationships
+- **AI Integration**: Direct AI API integration
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
 ## License
 
-TBD
+This project is licensed under the MIT License.
 
-## Author
+---
 
-Nathan Fightmaster  
+**Thoughtsitory** - Organize your AI conversations, one thought at a time.
