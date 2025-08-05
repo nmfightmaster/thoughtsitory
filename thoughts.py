@@ -14,6 +14,7 @@ from rich.tree import Tree
 
 from thoughtsitory.models import ThoughtNode, MessageType
 from thoughtsitory.utils import save_thought_node, print_node_summary, print_success_message, print_error_message
+from thoughtsitory.ai import AIService, print_ai_response, print_ai_error, validate_ai_setup
 
 app = typer.Typer(
     name="thoughts",
@@ -887,6 +888,101 @@ def visualize(
     console.print(f"  Nodes with parents: {nodes_with_parents}")
     console.print(f"  Nodes with forks: {nodes_with_forks}")
     console.print(f"  Nodes with related: {nodes_with_related}")
+
+
+@app.command()
+def ai_chat(
+    node_id: str = typer.Argument(..., help="ID of the ThoughtNode to chat with"),
+    message: str = typer.Option(None, "--message", "-m", help="User message to send to AI"),
+    fork: bool = typer.Option(False, "--fork", "-f", help="Fork the node before chatting to keep original clean")
+):
+    """Chat with an AI using a ThoughtNode as context."""
+    from thoughtsitory.utils import load_thought_node, save_thought_node
+    
+    console.print(Panel.fit("AI Chat", style="bold blue"))
+    
+    # Validate AI setup first
+    if not validate_ai_setup():
+        raise typer.Exit(1)
+    
+    # Load the node
+    node = load_thought_node(node_id)
+    if not node:
+        print_error_message(f"ThoughtNode with ID '{node_id}' not found")
+        raise typer.Exit(1)
+    
+    # Fork the node if requested
+    if fork:
+        console.print("[yellow]Forking node before chat to preserve original...[/yellow]")
+        
+        # Create a forked copy
+        forked_node = ThoughtNode(title=f"{node.title} (AI Chat)")
+        
+        # Copy content from original node
+        forked_node.content = node.content.copy()
+        
+        # Copy tags from original node
+        forked_node.tags = node.tags.copy()
+        
+        # Copy summary from original node
+        forked_node.summary = node.summary
+        
+        # Add the original node as a parent
+        forked_node.add_parent(node.id)
+        
+        # Add the forked node to the original node's forks
+        node.add_fork(forked_node.id)
+        
+        # Save the original node
+        save_thought_node(node)
+        
+        # Use the forked node for the chat
+        node = forked_node
+        console.print(f"[green]Forked node created with ID: {node.id}[/green]")
+    
+    # Get user message if not provided
+    if not message:
+        message = Prompt.ask("Enter your message for the AI")
+    
+    if not message.strip():
+        print_error_message("Message cannot be empty")
+        raise typer.Exit(1)
+    
+    # Add user message to the node
+    node.add_message(MessageType.USER, message.strip())
+    
+    # Initialize AI service
+    try:
+        ai_service = AIService()
+    except Exception as e:
+        print_error_message(f"Failed to initialize AI service: {e}")
+        raise typer.Exit(1)
+    
+    # Get AI response
+    try:
+        console.print("[dim]Getting AI response...[/dim]")
+        ai_response = ai_service.chat_with_node(node, message.strip())
+        
+        # Add AI response to the node
+        node.add_message(MessageType.AI, ai_response)
+        
+        # Create a snapshot of this conversation state
+        version_number = node.create_snapshot("AI Chat", f"User: {message.strip()}")
+        
+        # Save the updated node
+        file_path = save_thought_node(node)
+        
+        # Display the AI response
+        print_ai_response(ai_response, node.title)
+        
+        # Show success message
+        print_success_message(f"AI chat completed successfully!")
+        console.print(f"Saved to: {file_path}")
+        console.print(f"Version {version_number} created")
+        
+    except Exception as e:
+        print_ai_error(str(e))
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

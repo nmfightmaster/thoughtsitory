@@ -5,6 +5,7 @@ A Python CLI tool for managing modular AI conversation nodes called **ThoughtNod
 ## Features
 
 - **Modular Conversation Management**: Create, view, and manage AI conversation nodes
+- **AI Integration**: Direct OpenAI API integration for AI-powered conversations
 - **Node Forking**: Duplicate and branch conversations while preserving relationships
 - **Version Control**: Create snapshots and revert to previous versions with automatic backup
 - **Powerful Search**: Find nodes by title, tags, or message content with AND logic
@@ -31,6 +32,47 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```bash
 pip install -r requirements.txt
 ```
+
+### AI Integration Setup
+
+To use the AI chat functionality, you need to set up OpenAI API access:
+
+1. **Get an OpenAI API Key**:
+   - Sign up at [OpenAI](https://platform.openai.com/)
+   - Navigate to API Keys section
+   - Create a new API key
+
+2. **Set the API Key**:
+   ```bash
+   # On Linux/macOS
+   export OPENAI_API_KEY="your-api-key-here"
+   
+   # On Windows (PowerShell)
+   $env:OPENAI_API_KEY="your-api-key-here"
+   
+   # On Windows (Command Prompt)
+   set OPENAI_API_KEY=your-api-key-here
+   ```
+
+3. **Optional Environment Variables**:
+   ```bash
+   # Model to use (default: gpt-3.5-turbo)
+   export OPENAI_MODEL="gpt-4"
+   
+   # Maximum tokens per response (default: 1000)
+   export OPENAI_MAX_TOKENS="1500"
+   
+   # Temperature for response creativity (default: 0.7)
+   export OPENAI_TEMPERATURE="0.8"
+   
+   # Number of recent messages to include as context (default: 10)
+   export OPENAI_CONTEXT_MESSAGES="15"
+   ```
+
+4. **Test the Setup**:
+   ```bash
+   python thoughts.py ai-chat <node-id> --message "Hello"
+   ```
 
 ## Usage
 
@@ -68,6 +110,52 @@ python thoughts.py add-message <node-id> --type ai --text "Hello, how can I help
 ```bash
 python thoughts.py add-tag <node-id> <tag>
 ```
+
+#### Chat with AI using a ThoughtNode as context
+```bash
+# Interactive mode - prompts for message
+python thoughts.py ai-chat <node-id>
+
+# With message provided
+python thoughts.py ai-chat <node-id> --message "What do you think about this topic?"
+
+# Fork the node before chatting to preserve original
+python thoughts.py ai-chat <node-id> --fork --message "Let's explore this further"
+
+# Interactive mode with forking
+python thoughts.py ai-chat <node-id> --fork
+```
+
+**AI Chat Features:**
+- **Context Awareness**: AI receives the ThoughtNode's title, tags, summary, and recent conversation history
+- **Automatic Versioning**: Creates a snapshot after each AI interaction
+- **Fork Protection**: Use `--fork` flag to create a copy before chatting, preserving the original
+- **Rich Output**: Beautiful formatting for AI responses with node context
+- **Error Handling**: Comprehensive error handling for API issues, invalid keys, etc.
+- **Environment Configuration**: Supports configurable models, tokens, and temperature via environment variables
+
+**AI Chat Workflow:**
+```bash
+# 1. Create a conversation node
+python thoughts.py create --title "Project Discussion" --tags "project,planning"
+python thoughts.py add-message <node-id> --type user --text "Let's discuss the project scope"
+
+# 2. Chat with AI (preserves original)
+python thoughts.py ai-chat <node-id> --fork --message "What are the key considerations for this project?"
+
+# 3. Continue the conversation
+python thoughts.py ai-chat <node-id> --message "How should we prioritize the features?"
+
+# 4. View the conversation
+python thoughts.py view <node-id>
+```
+
+**Environment Variables for AI Configuration:**
+- `OPENAI_API_KEY`: Your OpenAI API key (required)
+- `OPENAI_MODEL`: Model to use (default: gpt-3.5-turbo)
+- `OPENAI_MAX_TOKENS`: Maximum response length (default: 1000)
+- `OPENAI_TEMPERATURE`: Response creativity (default: 0.7)
+- `OPENAI_CONTEXT_MESSAGES`: Number of recent messages to include (default: 10)
 
 #### Fork (duplicate) a ThoughtNode
 ```bash
@@ -476,6 +564,7 @@ thoughtsitory/
 ├── thoughtsitory/         # Package directory
 │   ├── __init__.py       # Package initialization
 │   ├── models.py         # Data models (ThoughtNode, Message)
+│   ├── ai.py             # AI integration (OpenAI API)
 │   └── utils.py          # Utility functions
 └── data/                 # Storage directory (created automatically)
     └── *.json           # ThoughtNode JSON files
@@ -488,6 +577,7 @@ thoughtsitory/
 The project is organized for easy expansion:
 
 - **`thoughtsitory/models.py`**: Core data models
+- **`thoughtsitory/ai.py`**: AI integration and OpenAI API handling
 - **`thoughtsitory/utils.py`**: File I/O and utility functions
 - **`thoughts.py`**: CLI commands and user interface
 
@@ -506,6 +596,7 @@ def new_command():
 
 - **typer**: Modern CLI framework
 - **rich**: Beautiful terminal output
+- **openai**: OpenAI API integration
 - **uuid**: UUID generation (built-in)
 
 ## Future Enhancements
@@ -516,7 +607,6 @@ Planned features for future versions:
 - **Export**: Export conversations in various formats
 - **Import**: Import from other conversation formats
 - **Graph Visualization**: Visualize node relationships
-- **AI Integration**: Direct AI API integration
 - **Version Management**: Advanced version control for ThoughtNodes
 - **Collaboration**: Multi-user support and sharing
 
