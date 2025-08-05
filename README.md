@@ -7,6 +7,7 @@ A Python CLI tool for managing modular AI conversation nodes called **ThoughtNod
 - **Modular Conversation Management**: Create, view, and manage AI conversation nodes
 - **Node Forking**: Duplicate and branch conversations while preserving relationships
 - **Version Control**: Create snapshots and revert to previous versions with automatic backup
+- **Powerful Search**: Find nodes by title, tags, or message content with AND logic
 - **Rich CLI Interface**: Beautiful console output with rich formatting
 - **Flexible Data Model**: Support for messages, tags, links, and versioning
 - **JSON Storage**: Simple file-based storage in JSON format
@@ -180,6 +181,50 @@ python thoughts.py revert <node-id> 1 --list
 # 4. Revert to earlier version
 python thoughts.py revert <node-id> 1 --yes
 # This creates a pre-revert snapshot and restores the original content
+```
+
+#### Search ThoughtNodes by title, tags, or message content
+```bash
+# Search by title (case-insensitive)
+python thoughts.py search --title "boss fight"
+
+# Search by tags (can use multiple --tag flags)
+python thoughts.py search --tag design --tag combat
+
+# Search by message content (case-insensitive)
+python thoughts.py search --message "summarize"
+
+# Combine search criteria (AND logic)
+python thoughts.py search --title "combat" --tag enemy --message "range"
+
+# Limit results
+python thoughts.py search --tag game --limit 5
+```
+
+**Search Features:**
+- **AND Logic**: All provided criteria must match (title AND tags AND message)
+- **Case-insensitive**: Searches are not case-sensitive
+- **Tag Matching**: Can search for multiple tags (node must have ALL specified tags)
+- **Message Search**: Searches through all message content in conversations
+- **Result Limiting**: Control number of results with `--limit` (default: 10)
+- **Rich Display**: Shows results in a formatted table with match reasons
+- **Helpful Errors**: Provides suggestions when no results are found
+
+**Example Search Workflow:**
+```bash
+# 1. Create nodes with different content
+python thoughts.py create --title "Game Design Discussion" --tags "game,design,combat"
+python thoughts.py add-message <node-id> --type user --text "Let's discuss the boss fight mechanics"
+
+python thoughts.py create --title "AI Project Planning" --tags "ai,planning,research"
+python thoughts.py add-message <node-id> --type user --text "We need to summarize the research findings"
+
+# 2. Search by different criteria
+python thoughts.py search --title "Game"                    # Finds Game Design Discussion
+python thoughts.py search --message "summarize"             # Finds AI Project Planning
+python thoughts.py search --tag design --tag combat         # Finds Game Design Discussion
+python thoughts.py search --title "Game" --tag design       # Finds Game Design Discussion
+python thoughts.py search --title "Game" --tag research     # No results (AND logic)
 ```
 
 ### Data Model

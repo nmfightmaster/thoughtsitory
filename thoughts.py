@@ -5,6 +5,7 @@ Thoughtsitory - A CLI tool for managing modular AI conversation nodes.
 
 import typer
 from datetime import datetime, timezone
+from typing import List
 from rich.console import Console
 from rich.prompt import Prompt, Confirm
 from rich.panel import Panel
@@ -414,6 +415,133 @@ def revert(
     except Exception as e:
         print_error_message(f"Failed to revert ThoughtNode: {e}")
         raise typer.Exit(1)
+
+
+@app.command()
+def search(
+    title: str = typer.Option(None, "--title", "-t", help="Substring to match in node titles (case-insensitive)"),
+    tag: List[str] = typer.Option(None, "--tag", "-g", help="Tag to search for (can be used multiple times)"),
+    message: str = typer.Option(None, "--message", "-m", help="Substring to match in message content (case-insensitive)"),
+    limit: int = typer.Option(10, "--limit", "-l", help="Maximum number of results to show")
+):
+    """Search ThoughtNodes by title, tags, or message content."""
+    from thoughtsitory.utils import list_thought_nodes
+    from rich.table import Table
+    
+    console.print(Panel.fit("Searching ThoughtNodes", style="bold blue"))
+    
+    # Load all nodes
+    nodes = list_thought_nodes()
+    
+    if not nodes:
+        console.print("[yellow]No ThoughtNodes found. Create some with 'thoughts create'[/yellow]")
+        return
+    
+    # Filter nodes based on criteria
+    filtered_nodes = []
+    
+    for node in nodes:
+        matches = []
+        node_matches = True
+        
+        # Check title filter
+        if title:
+            if title.lower() in node.title.lower():
+                matches.append(f"Title contains '{title}'")
+            else:
+                node_matches = False
+        
+        # Check tag filter
+        if tag:
+            node_tags_lower = [t.lower() for t in node.tags]
+            search_tags_lower = [t.lower() for t in tag]
+            
+            # Check if node has ALL of the search tags (AND logic)
+            has_all_tags = all(search_tag in node_tags_lower for search_tag in search_tags_lower)
+            if has_all_tags:
+                matches.append(f"Has tags: {', '.join(tag)}")
+            else:
+                node_matches = False
+        
+        # Check message filter
+        if message:
+            message_found = False
+            for msg in node.content:
+                if message.lower() in msg.text.lower():
+                    message_found = True
+                    break
+            
+            if message_found:
+                matches.append(f"Message contains '{message}'")
+            else:
+                node_matches = False
+        
+        # If no filters provided, include all nodes
+        if not title and not tag and not message:
+            node_matches = True
+            matches.append("No filters applied")
+        
+        if node_matches:
+            # Add match reasons to the node for display
+            node.match_reasons = matches
+            filtered_nodes.append(node)
+    
+    # Sort by updated_at (descending)
+    filtered_nodes.sort(key=lambda x: x.updated_at, reverse=True)
+    
+    # Apply limit
+    if limit > 0:
+        filtered_nodes = filtered_nodes[:limit]
+    
+    # Display results
+    if not filtered_nodes:
+        console.print("[yellow]No ThoughtNodes match your search criteria.[/yellow]")
+        console.print("\n[dim]Try:[/dim]")
+        console.print("  • Use fewer or different search terms")
+        console.print("  • Check spelling of tags")
+        console.print("  • Use 'thoughts list' to see all available nodes")
+        return
+    
+    # Create results table
+    table = Table(title=f"Search Results ({len(filtered_nodes)} found)")
+    table.add_column("Title", style="bold", width=30)
+    table.add_column("ID", style="dim", width=36)
+    table.add_column("Tags", style="green", width=20)
+    table.add_column("Updated", style="cyan", width=20)
+    table.add_column("Messages", style="yellow", width=10)
+    table.add_column("Matches", style="blue", width=30)
+    
+    for node in filtered_nodes:
+        # Truncate title if too long
+        display_title = node.title[:27] + "..." if len(node.title) > 30 else node.title
+        
+        # Format tags
+        tags_str = ", ".join(node.tags[:3])  # Show first 3 tags
+        if len(node.tags) > 3:
+            tags_str += f" (+{len(node.tags) - 3})"
+        
+        # Format updated date
+        updated_date = node.updated_at.split("T")[0]  # Just the date part
+        
+        # Format match reasons
+        match_reasons = "; ".join(node.match_reasons)
+        if len(match_reasons) > 27:
+            match_reasons = match_reasons[:24] + "..."
+        
+        table.add_row(
+            display_title,
+            node.id,
+            tags_str,
+            updated_date,
+            str(len(node.content)),
+            match_reasons
+        )
+    
+    console.print(table)
+    
+    # Show summary
+    if len(filtered_nodes) == limit and len(nodes) > limit:
+        console.print(f"\n[dim]Showing first {limit} results. Use --limit to see more.[/dim]")
 
 
 if __name__ == "__main__":
