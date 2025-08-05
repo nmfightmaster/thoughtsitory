@@ -418,6 +418,130 @@ def revert(
 
 
 @app.command()
+def compare(
+    node_id: str = typer.Argument(..., help="ID of the ThoughtNode to compare"),
+    version_a: int = typer.Argument(..., help="First version number to compare"),
+    version_b: int = typer.Argument(..., help="Second version number to compare"),
+    summaries: bool = typer.Option(False, "--summaries", "-s", help="Compare summaries instead of full content"),
+    brief: bool = typer.Option(False, "--brief", "-b", help="Only show number of changes")
+):
+    """Compare two versions of a ThoughtNode to see content changes."""
+    from thoughtsitory.utils import load_thought_node
+    import difflib
+    
+    console.print(Panel.fit("Comparing ThoughtNode Versions", style="bold blue"))
+    
+    # Load the node
+    node = load_thought_node(node_id)
+    if not node:
+        print_error_message(f"ThoughtNode with ID '{node_id}' not found")
+        raise typer.Exit(1)
+    
+    # Validate that versions exist
+    if not node.versions:
+        print_error_message("No versions found. Create snapshots first with 'thoughts snapshot'")
+        raise typer.Exit(1)
+    
+    # Find the specified versions
+    version_a_data = None
+    version_b_data = None
+    
+    for version_info in node.versions:
+        if version_info['version'] == version_a:
+            version_a_data = version_info
+        if version_info['version'] == version_b:
+            version_b_data = version_info
+    
+    if not version_a_data:
+        available_versions = [v['version'] for v in node.versions]
+        print_error_message(f"Version {version_a} not found. Available versions: {available_versions}")
+        raise typer.Exit(1)
+    
+    if not version_b_data:
+        available_versions = [v['version'] for v in node.versions]
+        print_error_message(f"Version {version_b} not found. Available versions: {available_versions}")
+        raise typer.Exit(1)
+    
+    # Display version information
+    console.print(f"\n[bold]Node:[/bold] {node.title}")
+    console.print(f"[bold]Comparing:[/bold] Version {version_a} vs Version {version_b}")
+    console.print(f"[bold]Version {version_a}:[/bold] {version_a_data['summary']} ({version_a_data['timestamp']})")
+    console.print(f"[bold]Version {version_b}:[/bold] {version_b_data['summary']} ({version_b_data['timestamp']})")
+    
+    # Extract content to compare
+    if summaries:
+        content_a = [version_a_data.get('summary', '')]
+        content_b = [version_b_data.get('summary', '')]
+        content_type = "summaries"
+    else:
+        # Extract message content from content_snapshot
+        content_a = [msg['text'] for msg in version_a_data['content_snapshot']]
+        content_b = [msg['text'] for msg in version_b_data['content_snapshot']]
+        content_type = "messages"
+    
+    # Check if versions are identical
+    if content_a == content_b:
+        console.print(f"\n[green]✓ No changes found between versions {version_a} and {version_b}[/green]")
+        return
+    
+    # Create diff
+    if brief:
+        # Count changes using a simpler approach
+        added_lines = len(content_b) - len(content_a)
+        removed_lines = 0
+        
+        # For more accurate counting, we'd need to do a proper diff analysis
+        # For now, just show the difference in message count
+        if added_lines > 0:
+            console.print(f"\n[bold]Summary of changes:[/bold]")
+            console.print(f"  Added {content_type}: {added_lines}")
+            console.print(f"  Total changes: {added_lines}")
+        elif added_lines < 0:
+            console.print(f"\n[bold]Summary of changes:[/bold]")
+            console.print(f"  Removed {content_type}: {abs(added_lines)}")
+            console.print(f"  Total changes: {abs(added_lines)}")
+        else:
+            console.print(f"\n[bold]Summary of changes:[/bold]")
+            console.print(f"  No changes in {content_type} count")
+            console.print(f"  Total changes: 0")
+        
+    else:
+        # Show detailed diff
+        console.print(f"\n[bold]Detailed diff ({content_type}):[/bold]")
+        
+        if summaries:
+            # For summaries, show a simple before/after
+            console.print(f"\n[bold]Summary Comparison:[/bold]")
+            console.print(f"[bold red]Version {version_a}:[/bold red] {content_a[0] if content_a else '(empty)'}")
+            console.print(f"[bold green]Version {version_b}:[/bold green] {content_b[0] if content_b else '(empty)'}")
+        else:
+            # For messages, create a detailed diff
+            diff = difflib.unified_diff(content_a, content_b, 
+                                      fromfile=f"Version {version_a}", 
+                                      tofile=f"Version {version_b}",
+                                      lineterm='')
+            
+            diff_text = '\n'.join(diff)
+            
+            if diff_text.strip():
+                # Format the diff with colors
+                lines = diff_text.split('\n')
+                for line in lines:
+                    if line.startswith('+') and not line.startswith('+++'):
+                        console.print(f"[green]{line}[/green]")
+                    elif line.startswith('-') and not line.startswith('---'):
+                        console.print(f"[red]{line}[/red]")
+                    elif line.startswith('@'):
+                        console.print(f"[blue]{line}[/blue]")
+                    elif line.startswith('+++') or line.startswith('---'):
+                        console.print(f"[dim]{line}[/dim]")
+                    else:
+                        console.print(line)
+            else:
+                console.print("[yellow]No differences found in content[/yellow]")
+
+
+@app.command()
 def search(
     title: str = typer.Option(None, "--title", "-t", help="Substring to match in node titles (case-insensitive)"),
     tag: List[str] = typer.Option(None, "--tag", "-g", help="Tag to search for (can be used multiple times)"),

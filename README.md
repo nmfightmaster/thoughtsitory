@@ -183,6 +183,49 @@ python thoughts.py revert <node-id> 1 --yes
 # This creates a pre-revert snapshot and restores the original content
 ```
 
+#### Compare two versions of a ThoughtNode
+```bash
+# Compare full content between versions
+python thoughts.py compare <node-id> <version-a> <version-b>
+
+# Compare just the summaries
+python thoughts.py compare <node-id> <version-a> <version-b> --summaries
+
+# Show only a brief summary of changes
+python thoughts.py compare <node-id> <version-a> <version-b> --brief
+
+# Combine options
+python thoughts.py compare <node-id> <version-a> <version-b> --summaries --brief
+```
+
+**Compare Features:**
+- **Content Comparison**: Shows detailed diff of message content between versions
+- **Summary Comparison**: Compare just the version summaries with `--summaries` flag
+- **Brief Mode**: Show only change counts with `--brief` flag
+- **Color-coded Output**: Added lines in green, removed lines in red
+- **Version Validation**: Checks that both versions exist before comparing
+- **Identical Detection**: Shows "No changes" message when versions are identical
+- **Rich Display**: Shows version metadata (timestamps, summaries) before diff
+
+**Example Compare Workflow:**
+```bash
+# 1. Create a conversation with multiple versions
+python thoughts.py create --title "Project Planning" --tags "planning,meeting"
+python thoughts.py add-message <node-id> --type user --text "Let's plan the project timeline"
+python thoughts.py add-message <node-id> --type ai --text "Here's a suggested timeline..."
+python thoughts.py snapshot <node-id> --summary "Initial Plan" --notes "Baseline version"
+
+# 2. Add more content and create another version
+python thoughts.py add-message <node-id> --type user --text "What about the budget?"
+python thoughts.py add-message <node-id> --type ai --text "Budget considerations..."
+python thoughts.py snapshot <node-id> --summary "With Budget" --notes "Added budget discussion"
+
+# 3. Compare the versions
+python thoughts.py compare <node-id> 1 2                    # Full content diff
+python thoughts.py compare <node-id> 1 2 --brief           # Just change counts
+python thoughts.py compare <node-id> 1 2 --summaries       # Compare summaries only
+```
+
 #### Search ThoughtNodes by title, tags, or message content
 ```bash
 # Search by title (case-insensitive)
@@ -258,6 +301,34 @@ Each version snapshot contains:
 - **content_snapshot**: Deep copy of all messages at the time of snapshot
 
 **Important Note**: When using the `revert` command, a "Pre-revert snapshot" is automatically created before restoring the target version. This ensures you can always recover the state that existed before the revert operation.
+
+### Versioning Workflow
+
+The versioning system provides a complete workflow for managing conversation history:
+
+1. **Create Snapshots**: Use `snapshot` to save the current state with a summary and notes
+2. **Compare Versions**: Use `compare` to see differences between any two versions
+3. **Revert Changes**: Use `revert` to restore a previous version (with automatic backup)
+
+**Example Versioning Workflow:**
+```bash
+# 1. Create and develop a conversation
+python thoughts.py create --title "Feature Planning" --tags "planning,feature"
+python thoughts.py add-message <node-id> --type user --text "Let's plan the user interface"
+python thoughts.py add-message <node-id> --type ai --text "I suggest a clean, minimal design..."
+python thoughts.py snapshot <node-id> --summary "Initial UI Plan" --notes "First draft of UI design"
+
+# 2. Continue development
+python thoughts.py add-message <node-id> --type user --text "What about mobile responsiveness?"
+python thoughts.py add-message <node-id> --type ai --text "Mobile-first design is essential..."
+python thoughts.py snapshot <node-id> --summary "Mobile Considerations" --notes "Added mobile design requirements"
+
+# 3. Compare the versions to see what changed
+python thoughts.py compare <node-id> 1 2
+
+# 4. If needed, revert to the earlier version
+python thoughts.py revert <node-id> 1 --yes
+```
 
 ### File Structure
 
